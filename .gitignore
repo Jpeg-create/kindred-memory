@@ -141,4 +141,15 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# AWS SAM — samconfig.toml can end up holding real parameter values
+# (DATABASE_URL, GEMINI_API_KEY) if `sam deploy --guided` is used to write
+# them for reuse on later deploys; .aws-sam/ is SAM's own local build
+# cache; dist-lambda/ is this project's own Lambda bundling output
+# (scripts/build-lambda.mjs) — both are regenerated locally, never
+# committed.
+samconfig.toml
+.aws-sam/
+dist-lambda/
+
 CLAUDE.md

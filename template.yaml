@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  KindredMemory — ingest and recall Lambda functions, behind API Gateway
+  HTTP API routes. Local build/verify only; nothing here creates real AWS
+  resources until `sam deploy` is run by hand.
+
+# DATABASE_URL and GEMINI_API_KEY are template parameters, not hardcoded
+# values, and NoEcho keeps them out of CloudFormation console/CLI output.
+# Real values are supplied at deploy time via
+# `sam deploy --parameter-overrides DatabaseUrl=... GeminiApiKey=...` or a
+# `samconfig.toml` — which must never be committed (see .gitignore) since
+# `sam deploy --guided` will happily write real parameter values into it.
+Parameters:
+  DatabaseUrl:
+    Type: String
+    NoEcho: true
+    Description: CockroachDB Cloud connection string (see .env.example for the shape).
+  GeminiApiKey:
+    Type: String
+    NoEcho: true
+    Description: Gemini API key, from https://aistudio.google.com/apikey.
+
+Globals:
+  Function:
+    # nodejs20.x (named in earlier task instructions) is being phased out —
+    # AWS blocks *new* function creation on it starting 2026-08-31, so this
+    # uses nodejs22.x instead (current LTS, supported through 2027-04-30;
+    # confirmed against AWS's Lambda runtime support docs during this pass).
+    Runtime: nodejs22.x
+    Architectures:
+      - x86_64
+    # Both handlers do a Gemini embedding call plus a CockroachDB round
+    # trip; 3s (Lambda's default) isn't enough headroom, especially on a
+    # cold start. 15s covers a slow embedding call + DB round trip
+    # comfortably without masking a genuinely hung request for too long.
+    Timeout: 15
+    MemorySize: 512
+    Environment:
+      Variables:
+        DATABASE_URL: !Ref DatabaseUrl
+        GEMINI_API_KEY: !Ref GeminiApiKey
+
+Resources:
+  AddMemoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      # Pre-built by `npm run build:lambda` (esbuild + a curated
+      # node_modules — see scripts/build-lambda.mjs for why). Run that
+      # before `sam build`; this CodeUri intentionally does NOT use SAM's
+      # own Metadata.BuildMethod: esbuild integration.
+      CodeUri: dist-lambda/addMemoryHandler/
+      Handler: index.handler
+      Events:
+        AddMemory:
+          Type: HttpApi
+          Properties:
+            Path: /memory
+            Method: POST
+
+  RecallFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist-lambda/recallHandler/
+      Handler: index.handler
+      Events:
+        Recall:
+          Type: HttpApi
+          Properties:
+            Path: /recall
+            Method: POST
+
+Outputs:
+  ApiEndpoint:
+    Description: Base URL of the HTTP API (implicit — shared by both routes above).
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
