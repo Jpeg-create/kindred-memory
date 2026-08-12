@@ -1,0 +1,110 @@
+// KindredMemory — Prisma schema
+//
+// Datasource uses the "cockroachdb" provider — Prisma DOES have a native
+// provider for CockroachDB (an earlier version of this comment claimed
+// otherwise and had us on the "postgresql" provider instead; that was
+// wrong — Prisma itself threw a runtime error during setup directing us
+// to switch to "cockroachdb", which is what's actually in use now).
+//
+// Prisma 7 moved the connection URL out of this file and into
+// prisma.config.ts at the repo root (schema-level `url = env(...)` is
+// rejected by `prisma validate` as of prisma@7.9.1) — see that file, and
+// src/lib/prisma.ts for how PrismaClient is instantiated with a driver
+// adapter, which Prisma 7 now requires. `@prisma/adapter-pg` is still the
+// correct adapter even with the cockroachdb provider, since CockroachDB
+// is wire-compatible with Postgres at the driver level.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "cockroachdb"
+}
+
+model FamilyMember {
+  id          String   @id @default(uuid())
+  name        String
+  relationship String  // e.g. "daughter", "son"
+  contactInfo String?
+  createdAt   DateTime @default(now())
+
+  addedMemories Memory[] @relation("MemoryAddedBy")
+}
+
+model Elder {
+  id             String   @id @default(uuid())
+  name           String
+  whatsappNumber String   @unique
+  createdAt      DateTime @default(now())
+
+  memories          Memory[]
+  conversationTurns ConversationTurn[]
+}
+
+model Memory {
+  id                     String   @id @default(uuid())
+  elderId                String
+  elder                  Elder    @relation(fields: [elderId], references: [id], onDelete: Cascade)
+  content                String
+  source                 MemorySource
+  addedByFamilyMemberId  String?
+  addedByFamilyMember    FamilyMember? @relation("MemoryAddedBy", fields: [addedByFamilyMemberId], references: [id])
+  createdAt              DateTime @default(now())
+
+  // TODO(vector): no CockroachDB vector INDEX exists yet on this column.
+  // Everything else here is done and confirmed working end to end against
+  // the real cluster: ingest (src/ingest/index.ts) and recall
+  // (src/recall/index.ts) both read/write this column via raw SQL
+  // ($queryRaw / $executeRaw with `::vector` casts) — Prisma Client still
+  // has no typed API for Unsupported() columns, so that raw-SQL path is
+  // permanent, not a placeholder. Embeddings come from Gemini's
+  // `gemini-embedding-2` model at 768 dimensions (see
+  // src/lib/embeddings.ts). Without an index, recall runs as a
+  // brute-force sequential scan ordered by distance — fine at current data
+  // volume. Building the index later will also need
+  // `SET CLUSTER SETTING feature.vector_index.enabled = true;` first
+  // (CockroachDB vector indexes are a preview feature, gated by that
+  // cluster setting) — and note that `prisma migrate dev` doesn't work on
+  // this project (see README-setup.md), so the index will need to be
+  // added via raw DDL run directly against the cluster, not a generated
+  // Prisma migration.
+  embedding Unsupported("vector(768)")?
+
+  @@index([elderId])
+}
+
+enum MemorySource {
+  family_added
+  conversation_derived
+}
+
+model ConversationTurn {
+  id        String            @id @default(uuid())
+  elderId   String
+  elder     Elder             @relation(fields: [elderId], references: [id], onDelete: Cascade)
+  role      ConversationRole
+  content   String
+  createdAt DateTime          @default(now())
+
+  @@index([elderId])
+}
+
+enum ConversationRole {
+  elder
+  companion
+}
+
+model AuditLogEntry {
+  id        String     @id @default(uuid())
+  actorType ActorType
+  actorId   String?
+  action    String     // e.g. "memory_added", "memory_deleted", "memory_viewed"
+  targetId  String?    // e.g. which Memory
+  createdAt DateTime   @default(now())
+}
+
+enum ActorType {
+  family
+  system
+}
