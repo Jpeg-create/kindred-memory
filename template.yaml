@@ -151,6 +151,19 @@ Resources:
             Path: /memories
             Method: GET
 
+  ListFamilyMembersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist-lambda/listFamilyMembersHandler/
+      Handler: index.handler
+      Events:
+        ListFamilyMembers:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /family-members
+            Method: GET
+
 Outputs:
   ApiEndpoint:
     Description: Base URL of the HTTP API (explicit HttpApi resource above — shared by all three routes).
