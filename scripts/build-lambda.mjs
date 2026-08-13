@@ -58,6 +58,7 @@ const functions = [
   { name: "chatHandler", entry: "src/lambda/chatHandler.ts" },
   { name: "listConversationsHandler", entry: "src/lambda/listConversationsHandler.ts" },
   { name: "conversationTranscriptHandler", entry: "src/lambda/conversationTranscriptHandler.ts" },
+  { name: "listMemoriesHandler", entry: "src/lambda/listMemoriesHandler.ts" },
 ];
 
 // Direct runtime packages actually imported by the Lambda handlers'

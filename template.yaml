@@ -138,6 +138,19 @@ Resources:
             Path: /conversations/transcript
             Method: GET
 
+  ListMemoriesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist-lambda/listMemoriesHandler/
+      Handler: index.handler
+      Events:
+        ListMemories:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /memories
+            Method: GET
+
 Outputs:
   ApiEndpoint:
     Description: Base URL of the HTTP API (explicit HttpApi resource above — shared by all three routes).
