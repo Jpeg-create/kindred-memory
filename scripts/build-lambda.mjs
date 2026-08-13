@@ -55,6 +55,7 @@ const nodeModules = path.join(rootDir, "node_modules");
 const functions = [
   { name: "addMemoryHandler", entry: "src/lambda/addMemoryHandler.ts" },
   { name: "recallHandler", entry: "src/lambda/recallHandler.ts" },
+  { name: "chatHandler", entry: "src/lambda/chatHandler.ts" },
 ];
 
 // Direct runtime packages actually imported by the Lambda handlers'

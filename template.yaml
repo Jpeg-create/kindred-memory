@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  KindredMemory — ingest and recall Lambda functions, behind API Gateway
-  HTTP API routes. Local build/verify only; nothing here creates real AWS
-  resources until `sam deploy` is run by hand.
+  KindredMemory — ingest, recall, and chat Lambda functions, behind API
+  Gateway HTTP API routes. Local build/verify only; nothing here creates
+  real AWS resources until `sam deploy` is run by hand.
 
 # DATABASE_URL and GEMINI_API_KEY are template parameters, not hardcoded
 # values, and NoEcho keeps them out of CloudFormation console/CLI output.
@@ -68,6 +68,18 @@ Resources:
           Type: HttpApi
           Properties:
             Path: /recall
+            Method: POST
+
+  ChatFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist-lambda/chatHandler/
+      Handler: index.handler
+      Events:
+        Chat:
+          Type: HttpApi
+          Properties:
+            Path: /chat
             Method: POST
 
 Outputs:

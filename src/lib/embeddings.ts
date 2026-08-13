@@ -13,7 +13,10 @@ const EMBEDDING_DIMENSIONS = 768;
 
 let client: GoogleGenAI | undefined;
 
-function getClient(): GoogleGenAI {
+// Exported so other Gemini callers (e.g. src/companion/reply.ts, for text
+// generation) share this same client/API-key setup instead of duplicating
+// it — same GEMINI_API_KEY, same lazy singleton.
+export function getGeminiClient(): GoogleGenAI {
   if (!client) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -25,7 +28,7 @@ function getClient(): GoogleGenAI {
 }
 
 export async function getEmbedding(text: string): Promise<number[]> {
-  const ai = getClient();
+  const ai = getGeminiClient();
 
   let response;
   try {
