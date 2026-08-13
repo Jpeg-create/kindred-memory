@@ -7,29 +7,91 @@ interface Message {
   text: string;
 }
 
+// Cold Lambda starts on /chat can run 30+ seconds — a running "X.Xs" timer
+// (rather than a static spinner) reads as "still working" instead of
+// "frozen" the longer it goes, which matters most right at the point a
+// first-time visitor is most likely to give up on it.
+function useElapsedSeconds(active: boolean): number {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!active) {
+      setElapsed(0);
+      return;
+    }
+    const start = performance.now();
+    const id = setInterval(() => {
+      setElapsed((performance.now() - start) / 1000);
+    }, 100);
+    return () => clearInterval(id);
+  }, [active]);
+
+  return elapsed;
+}
+
+function ThinkingBubble({ elapsedSeconds }: { elapsedSeconds: number }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+      <p
+        style={{
+          margin: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '20px 26px',
+          borderRadius: 26,
+          background: 'var(--card)',
+          color: 'var(--text-faint)',
+        }}
+      >
+        <span style={{ display: 'inline-flex', gap: 5 }} aria-hidden="true">
+          <span className="km-thinking-dot" style={{ animationDelay: '0s' }} />
+          <span className="km-thinking-dot" style={{ animationDelay: '0.18s' }} />
+          <span className="km-thinking-dot" style={{ animationDelay: '0.36s' }} />
+        </span>
+        <span
+          style={{
+            fontSize: 13,
+            fontVariantNumeric: 'tabular-nums',
+            color: 'var(--text-placeholder)',
+            letterSpacing: '0.02em',
+          }}
+        >
+          {elapsedSeconds.toFixed(1)}s
+        </span>
+      </p>
+    </div>
+  );
+}
+
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const elapsedSeconds = useElapsedSeconds(sending);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' });
-  }, [messages]);
+  }, [messages, sending]);
 
   const send = async () => {
     const text = draft.trim();
     if (!text || sending) return;
     setDraft('');
-    setError(null);
     setMessages((m) => [...m, { from: 'me', text }]);
     setSending(true);
     try {
       const reply = await sendChatMessage(text);
       setMessages((m) => [...m, { from: 'them', text: reply }]);
     } catch {
-      setError('Could not reach the companion. Please try again.');
+      setMessages((m) => [
+        ...m,
+        {
+          from: 'them',
+          text: 'Having trouble reaching the companion right now — try again in a moment.',
+        },
+      ]);
     } finally {
       setSending(false);
     }
@@ -105,27 +167,7 @@ export default function Chat() {
           </div>
         ))}
 
-        {sending && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 22,
-                lineHeight: 1.6,
-                padding: '20px 26px',
-                borderRadius: 26,
-                background: 'var(--card)',
-                color: 'var(--text-faint)',
-              }}
-            >
-              &hellip;
-            </p>
-          </div>
-        )}
-
-        {error && (
-          <p style={{ alignSelf: 'center', color: '#a15a5a', fontSize: 14 }}>{error}</p>
-        )}
+        {sending && <ThinkingBubble elapsedSeconds={elapsedSeconds} />}
         <div ref={bottomRef} />
       </main>
 
@@ -158,6 +200,7 @@ export default function Chat() {
             }}
             rows={1}
             placeholder="Write a message"
+            disabled={sending}
             style={{
               flex: 1,
               border: 'none',
@@ -170,6 +213,7 @@ export default function Chat() {
               color: 'var(--text)',
               padding: '12px 0',
               maxHeight: 160,
+              opacity: sending ? 0.7 : 1,
             }}
           />
           <button
