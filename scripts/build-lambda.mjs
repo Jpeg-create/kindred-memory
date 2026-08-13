@@ -18,13 +18,28 @@
 // real runtime deps; it was `prisma` (the CLI), which this project's
 // package.json lists as a regular dependency and which drags in Prisma
 // Studio's UI toolchain (React, protobufjs, elkjs, etc.) — none of that
-// runs in the Lambda handler. So instead: resolve and install only the
-// actual runtime dependency closure (@prisma/adapter-pg, pg, @google/genai,
-// dotenv) into an isolated temp directory via `npm install`, then overlay
-// the real *generated* @prisma/client + .prisma directories from this
-// repo's node_modules on top (the CLI itself is never copied — its job,
-// generating the client, already happened when you ran
-// `npx prisma generate`).
+// runs in the Lambda handler. So instead: resolve and install the actual
+// runtime dependency closure into an isolated temp directory via
+// `npm install`, then overlay the real *generated* @prisma/client + .prisma
+// directories from this repo's node_modules on top (the CLI itself is
+// never copied — its job, generating the client, already happened when
+// you ran `npx prisma generate`).
+//
+// That second part shipped a real production bug: `@prisma/client` itself
+// was left OUT of the npm-installed set (only @prisma/adapter-pg, pg,
+// @google/genai, dotenv were installed) and just `cpSync`'d in from the
+// generated output afterward. Since npm never saw @prisma/client as
+// something to resolve, it never installed what @prisma/client's own
+// package.json depends on — including @prisma/client-runtime-utils, which
+// Prisma's client runtime requires via a dynamic/computed require, not a
+// static import. Lambda failed on cold start:
+// `Cannot find module '@prisma/client-runtime-utils'`. This is exactly
+// the failure mode of predicting a dependency graph by hand instead of
+// asking npm to resolve it — so @prisma/client is now included in the
+// npm-installed set below (letting npm's resolver find its full real
+// transitive closure), and only the generated *contents* of
+// @prisma/client + .prisma get overlaid afterward, not the decision of
+// whether @prisma/client's dependencies get installed at all.
 
 import { build } from "esbuild";
 import { existsSync, rmSync, mkdirSync, cpSync, writeFileSync, readFileSync } from "node:fs";
@@ -46,7 +61,10 @@ const functions = [
 // dependency chain (checked against src/lib/prisma.ts and
 // src/lib/embeddings.ts). `prisma` (the CLI) and Prisma's own
 // TypeScript/Node types are intentionally excluded — dev/build-time only.
-const runtimeDeps = ["@prisma/adapter-pg", "pg", "@google/genai", "dotenv"];
+// @prisma/client IS included here (unlike the previous version of this
+// script) specifically so npm resolves ITS real dependency closure too —
+// see the header comment above for why that matters.
+const runtimeDeps = ["@prisma/client", "@prisma/adapter-pg", "pg", "@google/genai", "dotenv"];
 
 if (!existsSync(path.join(nodeModules, "@prisma", "client"))) {
   console.error("node_modules/@prisma/client not found — run `npx prisma generate` first.");
