@@ -42,6 +42,31 @@ Globals:
         GEMINI_API_KEY: !Ref GeminiApiKey
 
 Resources:
+  # Explicit HTTP API, replacing the implicit one SAM previously created on
+  # its own from the three functions' HttpApi events (which had no CORS
+  # config at all). A browser-based frontend will call /memory, /recall,
+  # and /chat directly from JS on a different origin than wherever the API
+  # ends up — without CORS, browsers block that even though the API itself
+  # works fine over curl. CorsConfiguration syntax confirmed against
+  # current SAM docs during this pass (AWS::Serverless::HttpApi's
+  # CorsConfiguration property, type HttpApiCorsConfiguration).
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        # AllowOrigins: "*" is a known simplification, not a silent
+        # choice — this is a hackathon demo and the frontend doesn't exist
+        # yet, so there's no real domain to scope this to. A real
+        # production deployment should replace "*" with the frontend's
+        # actual origin once it exists.
+        AllowOrigins:
+          - "*"
+        AllowMethods:
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+
   AddMemoryFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -55,6 +80,7 @@ Resources:
         AddMemory:
           Type: HttpApi
           Properties:
+            ApiId: !Ref HttpApi
             Path: /memory
             Method: POST
 
@@ -67,6 +93,7 @@ Resources:
         Recall:
           Type: HttpApi
           Properties:
+            ApiId: !Ref HttpApi
             Path: /recall
             Method: POST
 
@@ -74,15 +101,17 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: dist-lambda/chatHandler/
+      Timeout: 30
       Handler: index.handler
       Events:
         Chat:
           Type: HttpApi
           Properties:
+            ApiId: !Ref HttpApi
             Path: /chat
             Method: POST
 
 Outputs:
   ApiEndpoint:
-    Description: Base URL of the HTTP API (implicit — shared by both routes above).
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+    Description: Base URL of the HTTP API (explicit HttpApi resource above — shared by all three routes).
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
