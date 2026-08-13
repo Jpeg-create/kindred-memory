@@ -1,0 +1,67 @@
+:root {
+  --bg: #efece8;
+  --card: #fbfaf9;
+  --callout: #e7e2dc;
+  --text: #423c4a;
+  --text-muted: #6e6178;
+  --text-faint: #8b8391;
+  --text-placeholder: #a6a0ac;
+  --border: #dfdad4;
+  --divider: #e4dfd9;
+  --accent: #9b8bb4;
+  --accent-hover: #8a79a6;
+  --dot-family: #9b8bb4;
+  --dot-conversation: #b8b1aa;
+
+  --serif: Newsreader, Georgia, serif;
+  --sans: Karla, 'Helvetica Neue', Helvetica, sans-serif;
+
+  color-scheme: light;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 300;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--text);
+}
+
+textarea,
+input,
+button {
+  font-family: inherit;
+}
+
+textarea::placeholder,
+input::placeholder {
+  color: var(--text-placeholder);
+}
+
+button {
+  font-family: var(--sans);
+}
