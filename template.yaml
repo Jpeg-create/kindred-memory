@@ -62,6 +62,7 @@ Resources:
         AllowOrigins:
           - "*"
         AllowMethods:
+          - GET
           - POST
           - OPTIONS
         AllowHeaders:
@@ -110,6 +111,32 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /chat
             Method: POST
+
+  ListConversationsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist-lambda/listConversationsHandler/
+      Handler: index.handler
+      Events:
+        ListConversations:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /conversations
+            Method: GET
+
+  ConversationTranscriptFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist-lambda/conversationTranscriptHandler/
+      Handler: index.handler
+      Events:
+        ConversationTranscript:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /conversations/transcript
+            Method: GET
 
 Outputs:
   ApiEndpoint:
