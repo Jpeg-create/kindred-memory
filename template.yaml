@@ -111,6 +111,33 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /chat
             Method: POST
+        # Keeps ChatFunction's execution environment warm so a real user
+        # doesn't eat a cold start (a genuine request once hit the full 30s
+        # timeout cold, then succeeded in 5s warm on retry). This costs
+        # nothing beyond the free Lambda invocation tier — 12 invocations/
+        # hour is far inside the always-free 1M/month allowance, and
+        # chatHandler.ts's isApiGatewayHttpEvent() check makes this ping
+        # short-circuit before touching Gemini or CockroachDB, so it can
+        # never generate a real Gemini API call no matter how often it
+        # fires. Input is the entire event payload the function receives
+        # for this trigger (SAM/EventBridge replaces the event text
+        # wholesale when Input is set) — see chatHandler.ts for why that
+        # makes this marker unspoofable by a real request.
+        # TODO: disable or delete this Schedule block once the hackathon
+        # submission window closes (2026-08-18) — there's no reason to keep
+        # a function warm for judges who are no longer looking at it.
+        WarmupPing:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
+            Name: kindred-memory-chat-warmup
+            Description: >-
+              Pings ChatFunction every 5 minutes to avoid cold starts for
+              real users. Short-circuits before any Gemini/DB call — see
+              isApiGatewayHttpEvent() in chatHandler.ts. Remove after the
+              hackathon judging period ends.
+            Enabled: true
+            Input: '{"warmupPing": true}'
 
   ListConversationsFunction:
     Type: AWS::Serverless::Function
