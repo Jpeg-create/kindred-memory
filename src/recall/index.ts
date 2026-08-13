@@ -20,10 +20,21 @@ interface RecalledMemory {
 // `1 - cosine_distance` (the standard cosine-similarity identity), so
 // higher = more similar, computed in SQL rather than in JS.
 //
-// No vector index exists yet (see the TODO on Memory.embedding in
-// prisma/schema.prisma), so this runs as a brute-force sequential scan
-// ordered by distance. That's fine for a small number of memories per
-// elder; revisit once the index TODO is done.
+// No vector index exists yet — it's prepared but not yet run, see
+// prisma/manual-sql/create-vector-index.sql and the TODO on
+// Memory.embedding in prisma/schema.prisma — so this currently runs as a
+// brute-force sequential scan ordered by distance. That's fine for a
+// small number of memories per elder.
+//
+// This query's shape does NOT need to change once the index exists.
+// CockroachDB's vector indexes support a "prefix column" (here, elderId)
+// for scoped/filtered search, and per their docs, the index is used when
+// each prefix column is constrained with equality in the query — which
+// `WHERE "elderId" = ...` already does, combined with the required
+// `ORDER BY <distance operator>` and `LIMIT`. The index script creates
+// the index with elderId as that prefix column specifically to match this
+// existing query, rather than this query being reshaped to match the
+// index.
 export async function recallSimilarMemories({
   elderId,
   queryText,

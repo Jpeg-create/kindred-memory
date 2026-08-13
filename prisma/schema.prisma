@@ -52,7 +52,42 @@ model Memory {
   addedByFamilyMember    FamilyMember? @relation("MemoryAddedBy", fields: [addedByFamilyMemberId], references: [id])
   createdAt              DateTime @default(now())
 
-  // TODO(vector): no CockroachDB vector INDEX exists yet on this column.
+  // A real CockroachDB vector index (`memory_embedding_cosine_idx`) is
+  // LIVE on this column on the production cluster — created, applied, and
+  // confirmed via SHOW INDEXES. See
+  // prisma/manual-sql/create-vector-index.sql for the exact SQL (a
+  // reference/runbook now, not a to-do) — not a Prisma migration, since
+  // this project uses `db push`, not migration history (see
+  // README-setup.md). It uses elderId as a prefix column for
+  // cosine-distance search scoped per elder, matching
+  // src/recall/index.ts's existing query shape exactly (no code change
+  // was needed there — see the comment in that file).
+  //
+  // Two things worth knowing if you're reading this later:
+  //
+  // 1. CockroachDB's own sources disagreed on cosine-distance support:
+  //    the official Vector Indexes docs list `vector_cosine_ops` as
+  //    valid, but a CockroachDB engineering blog post described cosine as
+  //    still "on the roadmap." Rather than trust either blindly, this was
+  //    tested directly against this cluster with a throwaway index before
+  //    creating the real one — cosine works fine here. Docs and blog
+  //    posts can be stale relative to what's actually shipped; direct
+  //    empirical testing against the live cluster is what actually
+  //    settled it.
+  //
+  // 2. `EXPLAIN` on a realistic recall-shaped query (filtered by elderId,
+  //    ordered by cosine distance, LIMIT 5) shows the planner currently
+  //    choosing the plain B-tree `Memory_elderId_idx` (full scan + sort)
+  //    over the new vector index — NOT a bug. At the current tiny test
+  //    data volume, a full scan genuinely is cheaper than an
+  //    approximate-nearest-neighbor lookup, and CockroachDB's cost-based
+  //    optimizer picks it correctly. The vector index will get selected
+  //    naturally once real data volume grows past that crossover point.
+  //    (EXPLAIN also printed an "index recommendation" for that one tiny
+  //    test query specifically — not something to act on; it's about
+  //    optimizing that single small-scale query, unrelated to the actual
+  //    goal of using the vector index at production-realistic volume.)
+  //
   // Everything else here is done and confirmed working end to end against
   // the real cluster: ingest (src/ingest/index.ts) and recall
   // (src/recall/index.ts) both read/write this column via raw SQL
@@ -60,15 +95,7 @@ model Memory {
   // has no typed API for Unsupported() columns, so that raw-SQL path is
   // permanent, not a placeholder. Embeddings come from Gemini's
   // `gemini-embedding-2` model at 768 dimensions (see
-  // src/lib/embeddings.ts). Without an index, recall runs as a
-  // brute-force sequential scan ordered by distance — fine at current data
-  // volume. Building the index later will also need
-  // `SET CLUSTER SETTING feature.vector_index.enabled = true;` first
-  // (CockroachDB vector indexes are a preview feature, gated by that
-  // cluster setting) — and note that `prisma migrate dev` doesn't work on
-  // this project (see README-setup.md), so the index will need to be
-  // added via raw DDL run directly against the cluster, not a generated
-  // Prisma migration.
+  // src/lib/embeddings.ts).
   embedding Unsupported("vector(768)")?
 
   @@index([elderId])

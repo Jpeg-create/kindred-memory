@@ -74,7 +74,7 @@ Run that via the CockroachDB Cloud console's SQL shell (or `psql`/`cockroach sql
 against your cluster) — Prisma's raw-query methods aren't a great fit for
 one-off admin SQL like this.
 
-## 4. Ingest and recall are built — the vector index is the remaining TODO
+## 4. Ingest, recall, and the vector index are all live and confirmed
 
 `Memory.embedding` is `Unsupported("vector(768)")` (768 dims — matches
 Gemini's `gemini-embedding-2` model at `outputDimensionality: 768`).
@@ -85,20 +85,22 @@ Prisma Client itself still won't expose `embedding` as a typed/queryable
 field (no `prisma.memory.findMany({ where: { embedding: ... } })`) — that's
 permanent, not a gap to close, since Prisma has no native vector type.
 
-What's still actually outstanding is the CockroachDB vector **index**
-(HNSW-style, currently in preview) — there is none yet, so recall runs as
-a brute-force sequential scan ordered by distance, which is fine at
-current data volume. To add the index later:
+A real CockroachDB vector index (`memory_embedding_cosine_idx`) is applied
+on the production cluster too — see
+`prisma/manual-sql/create-vector-index.sql` (a reference/runbook now, not
+a to-do; it's already been run).
 
-1. Enable the preview feature on your cluster first (one-time):
-   ```sql
-   SET CLUSTER SETTING feature.vector_index.enabled = true;
-   ```
-2. Add the index via raw DDL run directly against the cluster (SQL shell,
-   same as the `schema_locked` step above) — not via
-   `prisma migrate dev --create-only`, since this project doesn't use
-   Prisma's migration history (see the `db push` note above), so there's
-   no migration file for Prisma to generate or hand-edit here.
+**Don't be surprised if the query planner doesn't use it yet.** `EXPLAIN`
+on a realistic recall query currently shows CockroachDB choosing a plain
+full scan + sort over the vector index — that's correct, expected,
+cost-based optimizer behavior at the current tiny (test-scale) row count,
+not a bug. A full scan genuinely is cheaper than an approximate-nearest-
+neighbor lookup at this size. The index will get picked up naturally once
+real data volume grows past that crossover point — if you're demoing or
+testing and check `EXPLAIN` yourself, this is expected, not something to
+debug. (More detail, including a docs-vs-blog discrepancy about cosine
+support that was resolved by testing directly against the cluster, is in
+the `Memory.embedding` comment in `prisma/schema.prisma`.)
 
 ## Sanity check
 
