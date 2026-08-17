@@ -42,8 +42,11 @@ export default function Landing() {
           zIndex: 2,
         }}
       >
-        <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '0.02em' }}>
-          KindredMemory
+        <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img src="/kindred-logo.png" alt="" style={{ height: 28, width: 'auto' }} />
+          <span style={{ fontFamily: 'var(--serif)', fontSize: 19, letterSpacing: '0.02em' }}>
+            KindredMemory
+          </span>
         </span>
         <Link
           to="/dashboard"

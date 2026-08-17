@@ -116,8 +116,11 @@ export default function Chat() {
           margin: '0 auto',
         }}
       >
-        <span style={{ fontFamily: 'var(--serif)', fontSize: 17, color: 'var(--text-faint)', letterSpacing: '0.02em' }}>
-          KindredMemory
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img src="/kindred-logo.png" alt="" style={{ height: 22, width: 'auto', opacity: 0.85 }} />
+          <span style={{ fontFamily: 'var(--serif)', fontSize: 17, color: 'var(--text-faint)', letterSpacing: '0.02em' }}>
+            KindredMemory
+          </span>
         </span>
         <Link to="/" style={{ fontSize: 15 }}>
           Back
