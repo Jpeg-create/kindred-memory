@@ -105,6 +105,7 @@ export default function Landing() {
           }}
         >
           <h1
+            className="km-hero-shadow"
             style={{
               fontFamily: 'var(--serif)',
               fontWeight: 300,
@@ -113,17 +114,20 @@ export default function Landing() {
               letterSpacing: '-0.015em',
               margin: 0,
               maxWidth: '15em',
+              pointerEvents: 'auto',
             }}
           >
             Conversations that don&rsquo;t start from nothing
           </h1>
           <p
+            className="km-hero-shadow"
             style={{
               fontSize: 'clamp(16px, 1.5vw, 21px)',
               lineHeight: 1.6,
               margin: '26px 0 0',
               maxWidth: '30em',
               color: 'var(--text-muted)',
+              pointerEvents: 'auto',
             }}
           >
             A companion for people living with memory loss. It remembers who your family is, the

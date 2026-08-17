@@ -89,3 +89,30 @@ button {
   background: var(--text-faint);
   animation: km-thinking-pulse 1.3s ease-in-out infinite;
 }
+
+/* Halo behind the hero heading/subhead so the thread illustration behind
+   them doesn't cut through the letterforms. Stronger on narrow viewports,
+   where the heading wraps to more lines and lands closer to the thread
+   image's darkest, densest knot. */
+.km-hero-shadow {
+  text-shadow:
+    0 0 4px var(--card),
+    0 0 8px var(--card),
+    0 0 14px var(--card),
+    0 0 22px var(--card);
+}
+
+@media (max-width: 640px) {
+  .km-hero-shadow {
+    text-shadow:
+      0 0 3px var(--card),
+      0 0 3px var(--card),
+      0 0 6px var(--card),
+      0 0 6px var(--card),
+      0 0 10px var(--card),
+      0 0 10px var(--card),
+      0 0 16px var(--card),
+      0 0 24px var(--card),
+      0 0 32px var(--card);
+  }
+}
