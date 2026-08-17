@@ -7,29 +7,7 @@ interface Message {
   text: string;
 }
 
-// Cold Lambda starts on /chat can run 30+ seconds — a running "X.Xs" timer
-// (rather than a static spinner) reads as "still working" instead of
-// "frozen" the longer it goes, which matters most right at the point a
-// first-time visitor is most likely to give up on it.
-function useElapsedSeconds(active: boolean): number {
-  const [elapsed, setElapsed] = useState(0);
-
-  useEffect(() => {
-    if (!active) {
-      setElapsed(0);
-      return;
-    }
-    const start = performance.now();
-    const id = setInterval(() => {
-      setElapsed((performance.now() - start) / 1000);
-    }, 100);
-    return () => clearInterval(id);
-  }, [active]);
-
-  return elapsed;
-}
-
-function ThinkingBubble({ elapsedSeconds }: { elapsedSeconds: number }) {
+function ThinkingBubble() {
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
       <p
@@ -40,7 +18,7 @@ function ThinkingBubble({ elapsedSeconds }: { elapsedSeconds: number }) {
           gap: 12,
           padding: '20px 26px',
           borderRadius: 26,
-          background: 'var(--card)',
+          background: 'var(--bg)',
           color: 'var(--text-faint)',
         }}
       >
@@ -48,16 +26,6 @@ function ThinkingBubble({ elapsedSeconds }: { elapsedSeconds: number }) {
           <span className="km-thinking-dot" style={{ animationDelay: '0s' }} />
           <span className="km-thinking-dot" style={{ animationDelay: '0.18s' }} />
           <span className="km-thinking-dot" style={{ animationDelay: '0.36s' }} />
-        </span>
-        <span
-          style={{
-            fontSize: 13,
-            fontVariantNumeric: 'tabular-nums',
-            color: 'var(--text-placeholder)',
-            letterSpacing: '0.02em',
-          }}
-        >
-          {elapsedSeconds.toFixed(1)}s
         </span>
       </p>
     </div>
@@ -69,7 +37,6 @@ export default function Chat() {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const elapsedSeconds = useElapsedSeconds(sending);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' });
@@ -114,6 +81,7 @@ export default function Chat() {
           maxWidth: 820,
           width: '100%',
           margin: '0 auto',
+          borderBottom: '1px solid var(--divider)',
         }}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -132,46 +100,59 @@ export default function Chat() {
           maxWidth: 820,
           width: '100%',
           margin: '0 auto',
-          padding: '8px 32px 24px',
+          padding: '20px 32px 24px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 28,
         }}
       >
-        <p
+        <div
           style={{
-            alignSelf: 'center',
-            fontSize: 14,
-            color: 'var(--text-placeholder)',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            margin: '8px 0 0',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 28,
+            minHeight: '55vh',
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 32,
+            padding: 'clamp(20px, 5vw, 36px)',
           }}
         >
-          Today
-        </p>
+          <p
+            style={{
+              alignSelf: 'center',
+              fontSize: 14,
+              color: 'var(--text-placeholder)',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              margin: 0,
+            }}
+          >
+            Today
+          </p>
 
-        {messages.map((m, i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: m.from === 'me' ? 'flex-end' : 'flex-start' }}>
-            <p
-              style={{
-                margin: 0,
-                maxWidth: '34em',
-                fontSize: 22,
-                lineHeight: 1.6,
-                padding: '20px 26px',
-                borderRadius: 26,
-                background: m.from === 'me' ? 'var(--accent)' : 'var(--card)',
-                color: m.from === 'me' ? 'var(--card)' : 'var(--text)',
-              }}
-            >
-              {m.text}
-            </p>
-          </div>
-        ))}
+          {messages.map((m, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: m.from === 'me' ? 'flex-end' : 'flex-start' }}>
+              <p
+                style={{
+                  margin: 0,
+                  maxWidth: '34em',
+                  fontSize: 22,
+                  lineHeight: 1.6,
+                  padding: '20px 26px',
+                  borderRadius: 26,
+                  background: m.from === 'me' ? 'var(--accent)' : 'var(--bg)',
+                  color: m.from === 'me' ? 'var(--card)' : 'var(--text)',
+                }}
+              >
+                {m.text}
+              </p>
+            </div>
+          ))}
 
-        {sending && <ThinkingBubble elapsedSeconds={elapsedSeconds} />}
-        <div ref={bottomRef} />
+          {sending && <ThinkingBubble />}
+          <div ref={bottomRef} />
+        </div>
       </main>
 
       <div style={{ position: 'sticky', bottom: 0, background: 'var(--bg)', padding: '16px 32px 32px' }}>
